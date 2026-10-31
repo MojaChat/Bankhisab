@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banking Cash & Cheque Calculator</title>
+<style>
+  :root { 
+    --navy:#12345a; 
+    --blue:#1769aa; 
+    --bg:#f3f6fa; 
+    --green:#137547; 
+    --red:#b42318; 
+    --border:#d7e0ea;
+    --gold-bg: #fffbe6;
+    --gold-border: #ffe58f;
+    --gold-text: #d48806;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Arial, "Noto Sans Bengali", sans-serif; background:var(--bg); color:#172b4d; scroll-behavior: smooth; }
+  header { background:linear-gradient(120deg,#12345a,#1769aa); color:white; padding:22px 16px; text-align:center; }
+  header h1 { margin:0 0 6px; font-size:clamp(22px,4vw,30px); }
+  header p { margin:0; opacity:.9; font-size:14px; }
+  
+  /* Mode Switcher */
+  .mode-container { display:flex; justify-content:center; gap:10px; margin:20px auto -5px; max-width:1100px; padding:0 14px; }
+  .mode-btn { flex:1; max-width:250px; padding:12px 18px; font-size:16px; font-weight:bold; border:2px solid var(--navy); border-radius:10px; background:#fff; color:var(--navy); cursor:pointer; transition:all 0.2s ease; text-align:center; }
+  .mode-btn.active { background:var(--navy); color:#fff; box-shadow:0 4px 10px rgba(18,52,90,0.25); }
+
+  main { max-width:1100px; margin:20px auto; padding:0 14px 30px; }
+  .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:0 4px 14px #183b5b0a; min-width:0; }
+  
+  /* Card Header */
+  .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .card h2 { margin:0; font-size:19px; color:var(--navy); }
+  .section-clear-btn { background:#fff0ef; color:#a32119; border:1px solid #f0b6ae; padding:4px 10px; font-size:12px; border-radius:6px; cursor:pointer; font-weight:bold; }
+  .section-clear-btn:hover { background:#fde8e7; }
+
+  .hint { font-size:13px; color:#5b6b80; margin:-6px 0 12px; line-height:1.5; }
+  
+  /* Input Container with Clear Button OUTSIDE the box */
+  .input-container { display:flex; align-items:center; gap:6px; width:100%; }
+  .input-container input { flex:1; }
+  
+  /* Smaller X Clear Button */
+  .btn-outside-clear {
+    background: #fff0ef;
+    border: 1px solid #f0b6ae;
+    color: var(--red);
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .btn-outside-clear:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+  /* Voucher Row & Denomination Grids */
+  .voucher-row { display:grid; grid-template-columns: 0.8fr 2fr 1fr; gap:10px; align-items:center; margin:8px 0; }
+  .voucher-row span.v-label { font-size:14px; font-weight:bold; color:var(--navy); white-space:nowrap; }
+  .voucher-comm { font-size:11px; color:var(--gold-text); font-weight:bold; text-align:right; font-variant-numeric:tabular-nums; display: none; }
+  .is-payorder .voucher-comm { display: block; }
+  
+  label { font-size:14px; }
+  
+  input { width:100%; min-width:0; padding:10px 12px; border:1px solid #bdc9d8; border-radius:8px; font:inherit; font-size:18px; font-weight:bold; background:#fff; color:#142b45; }
+  input:focus { outline:2px solid #9ac9f2; border-color:var(--blue); }
+  input[type=text], input[type=number] { text-align:right; }
+
+  /* Denomination Grid */
+  .denom-head,.denom-row { display:grid; grid-template-columns: 0.8fr 2fr 1fr; gap:10px; align-items:center; }
+  .denom-head { font-size:12px; font-weight:bold; color:#52647b; padding:0 2px 7px; }
+  .denom-row { padding:6px 0; border-top:1px solid #edf1f5; }
+  .denom-row .money { font-weight:bold; color:var(--navy); }
+  .denom-row output { text-align:right; font-variant-numeric:tabular-nums; font-size:14px; font-weight:bold; color:#142b45; }
+
+  /* Summaries & Stats */
+  .summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:16px; }
+  .stat { 
+    background:#f7faff; border:1px solid var(--border); padding:12px 14px 28px; border-radius:10px; 
+    position:relative; transition:all 0.2s ease;
+  }
+  .stat span { display:block; font-size:12px; color:#5b6b80; margin-bottom:6px; font-weight:600; }
+  .stat strong { font-size:clamp(16px,2.5vw,21px); font-variant-numeric:tabular-nums; overflow-wrap:anywhere; display:block; }
+  
+  .btn-copy-stat {
+    position:absolute; bottom:6px; right:6px; background:#e2e8f0; border:1px solid #cbd5e1;
+    color:#475569; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:4px;
+    cursor:pointer; transition:all 0.15s ease;
+  }
+  .btn-copy-stat:hover { background:#cbd5e1; color:#0f172a; }
+  .btn-copy-stat.copied { background:#16a34a; color:#fff; border-color:#16a34a; }
+
+  /* General মোডে লাল, Pay Order মোডে লাইট পার্পল (Light Purple) */
+  .highlight-voucher { background: var(--red) !important; border-color: #901b12 !important; }
+  .highlight-voucher span { color: #ffe5e3 !important; }
+  .highlight-voucher strong { color: #ffffff !important; font-weight: bold; }
+  .highlight-voucher .btn-copy-stat { background: #ffffff; color: var(--red); border-color: #ffffff; }
+  .highlight-voucher .btn-copy-stat:hover { background: #ffe5e3; }
+
+  .is-payorder .highlight-voucher { background: #eef4ff !important; border-color: #b4cbf0 !important; }
+  .is-payorder .highlight-voucher span { color: #1e40af !important; }
+  .is-payorder .highlight-voucher strong { color: #1d4ed8 !important; }
+  .is-payorder .highlight-voucher .btn-copy-stat { background: #e2e8f0; color: #475569; border-color: #cbd5e1; }
+  .is-payorder .highlight-voucher .btn-copy-stat:hover { background: #cbd5e1; color: #0f172a; }
+
+  .highlight-deep-red { background: var(--red) !important; border-color: #901b12 !important; }
+  .highlight-deep-red span { color: #ffe5e3 !important; }
+  .highlight-deep-red strong { color: #ffffff !important; font-weight: bold; }
+  .highlight-deep-red .btn-copy-stat { background: #ffffff; color: var(--red); border-color: #ffffff; }
+  .highlight-deep-red .btn-copy-stat:hover { background: #ffe5e3; }
+
+  /* Pay Order Commission Golden Style */
+  .highlight-golden { background:var(--gold-bg) !important; border-color:var(--gold-border) !important; }
+  .highlight-golden span { color:#874d00 !important; }
+  .highlight-golden strong { color:var(--gold-text) !important; }
+  .highlight-golden .btn-copy-stat { background: #ffffff; color: var(--gold-text); border-color: var(--gold-border); }
+  .highlight-golden .btn-copy-stat:hover { background: #fff1b8; }
+
+  /* Pay Order Only Elements (Hidden in General Mode) */
+  .payorder-stat { display: none; }
+  .is-payorder .payorder-stat { display: block; }
+
+  .in-words-box { margin-top:6px; font-size:12px; color:#ffffff; font-weight:bold; background: rgba(0,0,0,0.15); padding:5px 8px; border-radius:6px; word-break:break-word; }
+
+  /* Result Box */
+  .result { margin-top:16px; border-radius:12px; padding:18px; background:#e9f7ef; border:1px solid #a9dec0; position:relative; }
+  .result small { display:block; color:#286347; font-weight:bold; margin-bottom:5px; }
+  .result strong { font-size:clamp(24px,5vw,34px); color:var(--green); overflow-wrap:anywhere; }
+  .result p { margin:7px 0 0; font-size:14px; }
+  .result.due { background:#fff3f1; border-color:#f0b6ae; }
+  .result.due small,.result.due strong { color:var(--red); }
+
+  .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+  button { border:0; border-radius:9px; padding:11px 16px; font:inherit; font-weight:bold; cursor:pointer; }
+  .primary { background:var(--blue); color:#fff; }
+  .success { background:var(--green); color:#fff; }
+  .danger { background:#fff0ef; color:#a32119; border:1px solid #f0b6ae; }
+  .danger:hover { background:#fde8e7; }
+  .foot { color:#63738a; font-size:12px; text-align:center; margin:18px 0 0; }
+
+  /* Floating Scroll Arrow Buttons */
+  .scroll-nav {
+    position: fixed; right: 20px; bottom: 25px; z-index: 999;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .scroll-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--navy); color: #fff; border: 2px solid #fff;
+    font-size: 20px; font-weight: bold; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25); transition: all 0.2s ease;
+  }
+  .scroll-btn:hover { background: var(--blue); transform: scale(1.08); }
+
+  /* Popup Notification */
+  #toast {
+    position:fixed; top:-60px; left:50%; transform:translateX(-50%);
+    background:#10b981; color:white; padding:12px 24px; border-radius:30px;
+    font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:9999;
+    transition:top 0.4s ease, opacity 0.4s ease; opacity:0;
+  }
+  #toast.show { top:20px; opacity:1; }
+  
+  @media(max-width:720px) { .grid { grid-template-columns:1fr; } .card { padding:15px; } }
+  @media print {
+    body { background:#fff; } header { background:#fff; color:#111; padding:8px; }
+    main { max-width:none; margin:0; padding:0; } .card { box-shadow:none; break-inside:avoid; }
+    .actions,.hint,.foot,.mode-container,.section-clear-btn,.btn-outside-clear,.btn-copy-stat,.scroll-nav { display:none!important; }
+    .grid { grid-template-columns:1fr 1fr; gap:8px; }
+    input { border:0; border-bottom:1px solid #aaa; padding:4px; }
+    .result { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+
+<header id="topSection">
+  <h1>Banking Cash & Cheque Calculator</h1>
+  <p>ভাউচার, পে-অর্ডার, ক্যাশ ও চেক ডিনোমিনেশন এর হিসাব</p>
+</header>
+
+<!-- Toast Notification -->
+<div id="toast">Saved Successfully!</div>
+
+<!-- Floating Scroll Arrow Buttons -->
+<div class="scroll-nav">
+  <button type="button" class="scroll-btn" id="scrollTopBtn" title="কাম টু আপ" onclick="scrollToTop()">▲</button>
+  <button type="button" class="scroll-btn" id="scrollBottomBtn" title="ড্রপ টু বটম" onclick="scrollToBottom()">▼</button>
+</div>
+
+<!-- Transaction Mode Selection -->
+<div class="mode-container">
+  <button type="button" class="mode-btn active" id="btnGeneral" onclick="setTransactionMode('general')">General Transaction</button>
+  <button type="button" class="mode-btn" id="btnPayOrder" onclick="setTransactionMode('payorder')">Pay Order</button>
+</div>
+
+<main>
+  <form id="cashCalculatorForm">
+    
+    <!-- Hidden Fields for Formspree Submission -->
+    <input type="hidden" name="Transaction_Type" id="hiddenTxType" value="General Transaction">
+    <input type="hidden" name="Timestamp_Time" id="hiddenTimestamp">
+    <input type="hidden" name="Total_Voucher_Amount" id="hiddenVoucherTotal">
+    <input type="hidden" name="Pay_Order_Total_Commission" id="hiddenCommission" value="৳0.00">
+    <input type="hidden" name="Final_Payable_Amount" id="hiddenFinalPayable">
+    <input type="hidden" name="Total_Cash_Receipt_With_Cheque" id="hiddenCashTotal">
+    <input type="hidden" name="Cheque_Amount" id="hiddenChequeTotal" value="৳0.00">
+    <input type="hidden" name="Total_Payment_Received" id="hiddenTotalReceived">
+    <input type="hidden" name="Difference" id="hiddenDifference">
+    <input type="hidden" name="Transaction_Status" id="hiddenStatus">
+
+    <div class="grid">
+      <!-- Voucher Entry Section -->
+      <section class="card">
+        <div class="card-header">
+          <h2>১. Voucher Entry</h2>
+          <button type="button" class="section-clear-btn" id="clearVouchers">Clear</button>
+        </div>
+        <p class="hint"></p>
+        <div class="denom-head" style="margin-bottom: 4px;"><span>Voucher</span><span style="text-align:middle">Each Voucher Amount</span><span style="text-align:right">Commission</span></div>
+        <div id="voucherList"></div>
+        <div class="summary" style="grid-template-columns: 1fr; margin-top: 14px;">
+          <div class="stat highlight-voucher">
+            <span>Total Voucher Amount</span>
+            <strong id="voucherTotal">৳0.00</strong>
+            <button type="button" class="btn-copy-stat" onclick="copyValue('voucherTotal', this)">Copy</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cash Denomination & Cheque Entry Section -->
+      <section class="card">
+        <div class="card-header">
+          <h2>২. Cash Denomination</h2>
+          <button type="button" class="section-clear-btn" id="clearDenom">Clear</button>
+        </div>
+        <p class="hint"></p>
+        <div class="denom-head"><span>Note</span><span style="text-align:right">Quantity</span><span style="text-align:right">Total</span></div>
+        <div id="denominationList"></div>
+        
+        <div style="margin-top:16px; border-top:1px solid #edf1f5; padding-top:14px;">
+          <div class="card-header" style="margin-bottom: 8px;">
+            <h2 style="font-size:17px;">৩. Cheque Entry</h2>
+            <button type="button" class="section-clear-btn" id="clearCheque">Clear</button>
+          </div>
+          <div class="voucher-row">
+            <span class="v-label">Cheque</span>
+            <div class="input-container">
+              <input id="chequeAmount" name="Cheque_Amount_Input" type="text" placeholder="৳ Cheque" inputmode="decimal">
+              <button type="button" class="btn-outside-clear" onclick="clearInput('chequeAmount', true)">✕</button>
+            </div>
+            <div></div>
+          </div>
+        </div>
+
+        <div class="summary" style="grid-template-columns: 1fr; margin-top:14px;">
+          <div class="stat highlight-deep-red">
+            <span>Total Cash Receipt (চেকসহ)</span>
+            <strong id="totalCashDisplay">৳0.00</strong>
+            <div class="in-words-box" id="cashInWords">কথায়: শূন্য টাকা মাত্র।</div>
+            <button type="button" class="btn-copy-stat" onclick="copyValue('totalCashDisplay', this)">Copy</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Final Calculation Section -->
+    <section class="card" style="margin-top:16px" id="bottomSection">
+      <h2>৪. Final Calculation</h2>
+      <div class="summary">
+        <div class="stat highlight-voucher">
+          <span>Total Voucher Amount</span>
+          <strong id="summaryVoucher">৳0.00</strong>
+          <button type="button" class="btn-copy-stat" onclick="copyValue('summaryVoucher', this)">Copy</button>
+        </div>
+        
+        <!-- Pay Order Commission Stat (Golden Color) -->
+        <div class="stat payorder-stat highlight-golden">
+          <span>Total Pay Order Commission</span>
+          <strong id="summaryCommission">৳0.00</strong>
+          <button type="button" class="btn-copy-stat" onclick="copyValue('summaryCommission', this)">Copy</button>
+        </div>
+        
+        <!-- Total Payable (Only visible in Pay Order Mode) -->
+        <div class="stat payorder-stat highlight-deep-red">
+          <span>Total Payable (সহ কমিশন)</span>
+          <strong id="summaryPayable">৳0.00</strong>
+          <button type="button" class="btn-copy-stat" onclick="copyValue('summaryPayable', this)">Copy</button>
+        </div>
+
+        <div class="stat highlight-deep-red">
+          <span>Total Cash Receipt (চেকসহ)</span>
+          <strong id="summaryCash">৳0.00</strong>
+          <button type="button" class="btn-copy-stat" onclick="copyValue('summaryCash', this)">Copy</button>
+        </div>
+
+        <div class="stat">
+          <span>Cheque Amount</span>
+          <strong id="summaryCheque">৳0.00</strong>
+          <button type="button" class="btn-copy-stat" onclick="copyValue('summaryCheque', this)">Copy</button>
+        </div>
+
+        <div class="stat">
+          <span>Difference</span>
+          <strong id="summaryDifference">৳0.00</strong>
+          <button type="button" class="btn-copy-stat" onclick="copyValue('summaryDifference', this)">Copy</button>
+        </div>
+      </div>
+
+      <div class="result" id="finalResult" aria-live="polite">
+        <small id="resultLabel">Return Amount / ফেরত দিতে হবে</small>
+        <strong id="returnAmount">৳0.00</strong>
+        <p id="resultMessage">হিসাব সম্পন্ন।</p>
+        <button type="button" class="btn-copy-stat" style="bottom:12px; right:12px;" onclick="copyValue('returnAmount', this)">Copy</button>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="success" id="btnSubmit">Save Data</button>
+        <button type="button" class="primary" onclick="window.print()">Save PDF</button>
+        <button type="button" class="danger" id="clearAll">Clear All</button>
+      </div>
+      <p class="foot">ডেটা পাঠাতে 'Save Data' বাটনে ক্লিক করুন।</p>
+    </section>
+  </form>
+</main>
+
+<script>
+// Web Audio API Sound System
+let audioCtx = null;
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playTypeSound() {
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(320 + Math.random() * 80, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.05);
+    
+    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  } catch (e) {}
+}
+
+function playDeleteSound() {
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.08);
+    
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.08);
+  } catch (e) {}
+}
+
+function playClearSound() {
+  try {
+    const ctx = getAudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(220, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.15);
+    
+    gain.gain.setValueAtTime(0.6, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  } catch (e) {}
+}
+
+function playCopySound() {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    [587.33, 880.00].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+      
+      gain.gain.setValueAtTime(0, now + idx * 0.06);
+      gain.gain.linearRampToValueAtTime(0.3, now + idx * 0.06 + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.2);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(now + idx * 0.06);
+      osc.stop(now + idx * 0.06 + 0.2);
+    });
+  } catch (e) {}
+}
+
+function playSaveSound() {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+    
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+      
+      gain.gain.setValueAtTime(0, now + idx * 0.07);
+      gain.gain.linearRampToValueAtTime(0.3, now + idx * 0.07 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.3);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.3);
+    });
+  } catch (e) {}
+}
+
+const denominations = [1000, 500, 200, 100, 50, 20, 10, 5, 2, 1];
+const voucherList = document.getElementById('voucherList');
+const denominationList = document.getElementById('denominationList');
+const form = document.getElementById('cashCalculatorForm');
+
+let currentMode = 'general';
+const formspreeLinks = {
+  general: "https://formspree.io/f/xeaaazel",
+  payorder: "https://formspree.io/f/xgaaazop"
+};
+
+const modeData = {
+  general: { vouchers: Array(10).fill(''), denoms: Array(denominations.length).fill(''), cheque: '' },
+  payorder: { vouchers: Array(10).fill(''), denoms: Array(denominations.length).fill(''), cheque: '' }
+};
+
+function saveCurrentModeData() {
+  const vInputs = document.querySelectorAll('.voucher-input');
+  modeData[currentMode].vouchers = Array.from(vInputs).map(inp => inp.value);
+
+  const dInputs = document.querySelectorAll('.denom-input');
+  modeData[currentMode].denoms = Array.from(dInputs).map(inp => inp.value);
+
+  modeData[currentMode].cheque = document.getElementById('chequeAmount').value;
+}
+
+function restoreModeData() {
+  const vInputs = document.querySelectorAll('.voucher-input');
+  vInputs.forEach((inp, idx) => {
+    inp.value = modeData[currentMode].vouchers[idx] || '';
+  });
+
+  const dInputs = document.querySelectorAll('.denom-input');
+  dInputs.forEach((inp, idx) => {
+    inp.value = modeData[currentMode].denoms[idx] || '';
+  });
+
+  document.getElementById('chequeAmount').value = modeData[currentMode].cheque || '';
+}
+
+function setTransactionMode(mode) {
+  saveCurrentModeData();
+  currentMode = mode;
+  
+  const btnGeneral = document.getElementById('btnGeneral');
+  const btnPayOrder = document.getElementById('btnPayOrder');
+  const hiddenTxType = document.getElementById('hiddenTxType');
+
+  if (mode === 'payorder') {
+    btnGeneral.classList.remove('active');
+    btnPayOrder.classList.add('active');
+    document.body.classList.add('is-payorder');
+    hiddenTxType.value = "Pay Order";
+  } else {
+    btnPayOrder.classList.remove('active');
+    btnGeneral.classList.add('active');
+    document.body.classList.remove('is-payorder');
+    hiddenTxType.value = "General Transaction";
+  }
+
+  restoreModeData();
+  calculate();
+}
+
+for (let i = 1; i <= 10; i++) {
+  const row = document.createElement('div');
+  row.className = 'voucher-row';
+  row.innerHTML = `
+    <span class="v-label">Voucher ${i}</span>
+    <div class="input-container">
+      <input id="voucher${i}" name="Voucher_${i}" class="voucher-input" type="text" placeholder="৳ Amount" inputmode="decimal">
+      <button type="button" class="btn-outside-clear" onclick="clearInput('voucher${i}', true)">✕</button>
+    </div>
+    <div class="voucher-comm" id="vComm${i}"></div>`;
+  voucherList.appendChild(row);
+}
+
+denominations.forEach((value, idx) => {
+  const row = document.createElement('div');
+  row.className = 'denom-row';
+  row.innerHTML = `
+    <span class="money">৳${value.toLocaleString('en-US')}</span>
+    <div class="input-container">
+      <input type="text" id="denom_${value}" name="Note_${value}_Qty" placeholder="0" class="denom-input" data-value="${value}" aria-label="৳${value} quantity" inputmode="numeric">
+      <button type="button" class="btn-outside-clear" onclick="clearInput('denom_${value}', true)">✕</button>
+    </div>
+    <output data-total-for="${value}">৳0.00</output>`;
+  denominationList.appendChild(row);
+});
+
+function clearInput(id, playSound = false) {
+  const el = document.getElementById(id);
+  if (el && el.value !== '') {
+    el.value = '';
+    if (playSound) playTypeSound();
+    calculate();
+  }
+}
+
+function formatNumberInput(input) {
+  let val = input.value.replace(/,/g, '');
+  if (val === '') return;
+  
+  let parts = val.split('.');
+  let integerPart = parts[0].replace(/\D/g, '');
+  let decimalPart = parts.length > 1 ? '.' + parts[1].replace(/\D/g, '') : '';
+  
+  if (integerPart !== '') {
+    integerPart = Number(integerPart).toLocaleString('en-US');
+  }
+  
+  input.value = integerPart + decimalPart;
+}
+
+const money = amount => '৳' + amount.toLocaleString('en-BD', {
+  minimumFractionDigits: 2, maximumFractionDigits: 2
+});
+
+const numeric = element => {
+  if (!element || !element.value) return 0;
+  const cleanVal = element.value.replace(/,/g, '');
+  const value = Number(cleanVal);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+};
+
+function numberToBanglaWords(n) {
+  if (n === 0) return 'শূন্য টাকা মাত্র।';
+
+  const units = ['', 'এক', 'দুই', 'তিন', 'চার', 'পাঁচ', 'ছয়', 'সাত', 'আট', 'নয়', 'দশ', 
+    'এগারো', 'বারো', 'তেরো', 'চৌদ্দ', 'পনেরো', 'ষোলো', 'সতেরো', '১৮' ,'উনিশ', 'বিশ',
+    'একুশ', 'বাইশ', 'তেইশ', 'চব্বিশ', 'পঁচিশ', 'ছাব্বিশ', 'সাতাশ', 'আটাশ', 'উনত্রিশ', 'ত্রিশ',
+    'একত্রিশ', 'বত্রিশ', 'তেত্রিশ', 'চৌত্রিশ', 'পঁয়ত্রিশ', 'ছত্রিশ', 'সাইত্রিশ', 'আটত্রিশ', 'উনচল্লিশ', 'চল্লিশ',
+    'একচল্লিশ', 'বায়াল্লিশ', 'তেতাল্লিশ', 'চৌয়াল্লিশ', 'পঁয়তাল্লিশ', 'ছেচল্লিশ', 'সাতচল্লিশ', 'আটচল্লিশ', 'উনপঞ্চাশ', 'পঞ্চাশ',
+    'একান্ন', 'বায়ান্ন', 'তিপ্পান্ন', 'চৌয়ান্ন', 'পঞ্চান্ন', 'ছাপ্পান্ন', 'সাতান্ন', 'আটান্ন', 'উনষাট', 'ষাট',
+    'একষট্টি', 'বাষট্টি', 'তেষট্টি', 'চৌষট্টি', 'পঁয়ষট্টি', 'ছেষট্টি', 'সাতষট্টি', 'আটষট্টি', 'উনসত্তর', 'সত্তর',
+    'একাত্তর', 'বাহাত্তর', 'তিয়াত্তর', 'চৌয়াত্তর', 'পঁচাত্তর', 'ছিয়াত্তর', 'সাতাত্তর', 'আটাত্তর', 'উনআশি', 'আশি',
+    'একআশি', 'বিরাশি', 'তৈরাশি', 'চৌরাশি', 'পঁচাশির', 'ছিয়াশি', 'সাতাসি', 'আটাসি', 'উননব্বই', 'নব্বই',
+    'একানব্বই', 'বিয়ানব্বই', 'তেরানব্বই', 'চৌরানব্বই', 'পঁচানব্বই', 'ছিয়ানব্বই', 'সাতানব্বই', 'আটানব্বই', 'নিরানব্বই'];
+
+  function convertTwoDigits(num) {
+    return units[num] || '';
+  }
+
+  let amount = Math.floor(n);
+  let words = '';
+
+  const crore = Math.floor(amount / 10000000);
+  amount %= 10000000;
+
+  const lakh = Math.floor(amount / 100000);
+  amount %= 100000;
+
+  const thousand = Math.floor(amount / 1000);
+  amount %= 1000;
+
+  const hundred = Math.floor(amount / 100);
+  amount %= 100;
+
+  if (crore > 0) words += numberToBanglaWords(crore).replace(' টাকা মাত্র।', '') + ' কোটি ';
+  if (lakh > 0) words += convertTwoDigits(lakh) + ' লক্ষ ';
+  if (thousand > 0) words += convertTwoDigits(thousand) + ' হাজার ';
+  if (hundred > 0) words += convertTwoDigits(hundred) + ' শত ';
+  if (amount > 0) words += convertTwoDigits(amount) + ' ';
+
+  return 'কথায়: ' + words.trim() + ' টাকা মাত্র।';
+}
+
+function getSingleVoucherCommission(amount) {
+  if (amount <= 0) return 0;
+  if (amount <= 1000) return 23;
+  if (amount <= 100000) return 58;
+  return 115;
+}
+
+function calculate() {
+  let voucherTotal = 0;
+  let totalCommission = 0;
+
+  for (let i = 1; i <= 10; i++) {
+    const input = document.getElementById(`voucher${i}`);
+    const commDiv = document.getElementById(`vComm${i}`);
+    const val = numeric(input);
+    voucherTotal += val;
+
+    if (val > 0 && currentMode === 'payorder') {
+      const comm = getSingleVoucherCommission(val);
+      totalCommission += comm;
+      commDiv.textContent = `কমঃ ৳${comm}`;
+    } else {
+      commDiv.textContent = '';
+    }
+  }
+
+  let cashTotal = 0;
+  document.querySelectorAll('.denom-input').forEach(input => {
+    const quantity = Math.floor(numeric(input));
+    const subtotal = quantity * Number(input.dataset.value);
+    cashTotal += subtotal;
+    document.querySelector(`[data-total-for="${input.dataset.value}"]`).textContent = money(subtotal);
+  });
+
+  const chequeTotal = numeric(document.getElementById('chequeAmount'));
+  const totalCashAndChequeReceipt = cashTotal + chequeTotal;
+
+  const basePayable = voucherTotal;
+  let finalCommission = currentMode === 'payorder' ? totalCommission : 0;
+  const finalPayable = basePayable + finalCommission;
+  
+  const effectivePayable = currentMode === 'payorder' ? finalPayable : basePayable;
+  const difference = totalCashAndChequeReceipt - effectivePayable;
+
+  document.getElementById('voucherTotal').textContent = money(voucherTotal);
+  document.getElementById('totalCashDisplay').textContent = money(totalCashAndChequeReceipt);
+  document.getElementById('cashInWords').textContent = numberToBanglaWords(totalCashAndChequeReceipt);
+
+  document.getElementById('summaryVoucher').textContent = money(voucherTotal);
+  document.getElementById('summaryCommission').textContent = money(finalCommission);
+  document.getElementById('summaryPayable').textContent = money(finalPayable);
+  document.getElementById('summaryCash').textContent = money(totalCashAndChequeReceipt);
+  document.getElementById('summaryCheque').textContent = money(chequeTotal);
+  document.getElementById('summaryDifference').textContent = money(difference);
+
+  const result = document.getElementById('finalResult');
+  const label = document.getElementById('resultLabel');
+  const amount = document.getElementById('returnAmount');
+  const message = document.getElementById('resultMessage');
+  result.classList.remove('due');
+
+  let statusText = '';
+  if (difference > 0) {
+    label.textContent = 'Return Amount / ফেরত দিতে হবে';
+    amount.textContent = money(difference);
+    message.textContent = 'প্রাপ্ত পেমেন্ট (ক্যাশ+চেক) প্রদেয় মূল্যের চেয়ে বেশি। অতিরিক্ত টাকা ফেরত দিন।';
+    statusText = `Return Amount: ${money(difference)}`;
+  } else if (difference < 0) {
+    result.classList.add('due');
+    label.textContent = 'Outstanding Amount / আরও দিতে হবে';
+    amount.textContent = money(Math.abs(difference));
+    message.textContent = 'প্রাপ্ত পেমেন্ট (ক্যাশ+চেক) প্রদেয় মূল্যের চেয়ে কম। বাকি টাকা গ্রহণ করতে হবে।';
+    statusText = `Outstanding Amount: ${money(Math.abs(difference))}`;
+  } else {
+    label.textContent = 'Return Amount / ফেরত দিতে হবে';
+    amount.textContent = money(0);
+    message.textContent = 'হিসাব সমান। কোনো টাকা ফেরত দিতে হবে না, বকেয়াও নেই।';
+    statusText = 'Balanced (No Return/Due)';
+  }
+
+  document.getElementById('hiddenVoucherTotal').value = money(voucherTotal);
+  document.getElementById('hiddenCommission').value = money(finalCommission);
+  document.getElementById('hiddenFinalPayable').value = money(effectivePayable);
+  document.getElementById('hiddenCashTotal').value = money(totalCashAndChequeReceipt);
+  document.getElementById('hiddenChequeTotal').value = money(chequeTotal);
+  document.getElementById('hiddenTotalReceived').value = money(totalCashAndChequeReceipt);
+  document.getElementById('hiddenDifference').value = money(difference);
+  document.getElementById('hiddenStatus').value = statusText;
+
+  saveCurrentModeData();
+}
+
+function copyValue(elementId, btn) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const textToCopy = el.textContent.trim();
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      playCopySound();
+      showCopySuccess(btn);
+    }).catch(() => {
+      fallbackCopyText(textToCopy, btn);
+    });
+  } else {
+    fallbackCopyText(textToCopy, btn);
+  }
+}
+
+function fallbackCopyText(text, btn) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    const successful = document.execCommand('copy');
+    if (successful) {
+      playCopySound();
+      showCopySuccess(btn);
+    } else {
+      alert("কপি করা যায়নি।");
+    }
+  } catch (err) {
+    alert("কপি করার সময় ত্রুটি ঘটেছে।");
+  }
+  document.body.removeChild(textArea);
+}
+
+function showCopySuccess(btn) {
+  const originalText = btn.textContent;
+  btn.textContent = 'Copied!';
+  btn.classList.add('copied');
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.classList.remove('copied');
+  }, 1500);
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function scrollToBottom() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+// Input Event Listener (Type Sound for Box Inputs)
+document.addEventListener('input', event => {
+  if (event.target.matches('.voucher-input, .denom-input, #chequeAmount')) {
+    formatNumberInput(event.target);
+    playDeleteSound(); 
+    calculate();
+  }
+});
+
+// Keydown Listener to play sound on Enter or Next keypress
+document.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === 'Next' || event.keyCode === 13) {
+    if (event.target.matches('.voucher-input, .denom-input, #chequeAmount')) {
+      playDeleteSound();
+    }
+  }
+});
+
+document.getElementById('clearVouchers').addEventListener('click', () => {
+  document.querySelectorAll('.voucher-input').forEach(input => input.value = '');
+  playClearSound();
+  calculate();
+});
+
+document.getElementById('clearDenom').addEventListener('click', () => {
+  document.querySelectorAll('.denom-input').forEach(input => input.value = '');
+  playClearSound();
+  calculate();
+});
+
+document.getElementById('clearCheque').addEventListener('click', () => {
+  document.getElementById('chequeAmount').value = '';
+  playClearSound();
+  calculate();
+});
+
+document.getElementById('clearAll').addEventListener('click', () => {
+  modeData.general = { vouchers: Array(10).fill(''), denoms: Array(denominations.length).fill(''), cheque: '' };
+  modeData.payorder = { vouchers: Array(10).fill(''), denoms: Array(denominations.length).fill(''), cheque: '' };
+  restoreModeData();
+  playClearSound();
+  calculate();
+});
+
+form.addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  playSaveSound();
+
+  const now = new Date();
+  document.getElementById('hiddenTimestamp').value = now.toLocaleString('en-BD', {
+    dateStyle: 'full',
+    timeStyle: 'medium'
+  });
+
+  const targetUrl = formspreeLinks[currentMode];
+  const formData = new FormData(form);
+
+  fetch(targetUrl, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'Accept': 'application/json'
+    }
+  }).then(response => {
+    if (response.ok) {
+      showToast();
+    } else {
+      alert("ডাটা সেভ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    }
+  }).catch(error => {
+    showToast();
+  });
+});
+
+function showToast() {
+  const toast = document.getElementById('toast');
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+calculate();
+</script>
+</body>
+</html>
